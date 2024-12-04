@@ -1,6 +1,7 @@
 from AppKit import (NSApplication, NSStatusBar, 
                       NSMenu, NSMenuItem,
-                      NSEventTypeRightMouseDown, NSEventTypeLeftMouseDown)
+                      NSEventTypeRightMouseDown, NSEventTypeLeftMouseDown,
+                      NSApplicationActivationPolicyAccessory)
 from PyObjCTools import AppHelper
 
 class CounterApp:
@@ -56,6 +57,7 @@ class CounterApp:
         self.button.setTitle_(f"{self.counter}")
     
     def run(self):
+        self.app.setActivationPolicy_(NSApplicationActivationPolicyAccessory)
         self.app.activateIgnoringOtherApps_(True)
         AppHelper.runEventLoop()
 
