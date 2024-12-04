@@ -5,16 +5,9 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "py2app>=0.28.8",
     "pyobjc-core>=10.1",
     "pyobjc-framework-cocoa>=10.1",
     "pyobjc>=10.1",
-    "pyobjc-framework-scriptingbridge>=10.3.2",
-    "pyobjc-framework-instantmessage==10.3.2",
-    "pyobjc-framework-inputmethodkit==10.3.2",
-    "pyobjc-framework-dictionaryservices==10.3.2",
-    "pyobjc-framework-collaboration==10.3.2",
-    "pyobjc-framework-calendarstore==10.3.2",
     "setuptools>=75.6.0",
     "pyinstaller>=6.11.1",
 ]
