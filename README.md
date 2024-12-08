@@ -6,11 +6,12 @@ A simple yet powerful menu bar counter application for macOS.
 - Persistent counter that saves state between app restarts
 - Toggle between compact and full display modes
 - View weekly statistics via system notifications
-- SQLite database for reliable data storage
+- DuckDB for efficient and reliable data storage
 - Historical tracking of all counter changes
 
 ## Data Storage
-- Counter data is stored in `~/.counter.db`
+- Counter data is stored in `~/.counter.duckdb`
+- Uses DuckDB for fast analytics and reliable storage
 - Tracks counter values, display preferences, and click history
 - Maintains a 7-day history of counter usage
 
@@ -29,9 +30,14 @@ A simple yet powerful menu bar counter application for macOS.
   - source .venv/bin/activate
   - uv sync
 
+### Dependencies
+Required packages:
+- pyobjc-framework-Cocoa
+- duckdb>=0.9.2
+- pyinstaller (for building)
 
 ## Building
 - Using PyInstaller:
-  - pyinstaller main.py --add-data="counter.db:."  -n MenuBarCounter -F -w -y --clean   
-  - .counter.db file will be located in ~/
-  - file will be in dist folder
+  - pyinstaller main.py -n MenuBarCounter -F -w -y --clean   
+  - .counter.duckdb file will be created in ~/ on first run
+  - Executable will be in dist folder

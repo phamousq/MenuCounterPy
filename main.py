@@ -1,8 +1,7 @@
 import os
-import sqlite3
-from datetime import datetime
 from typing import List, Tuple
 
+import duckdb
 from AppKit import (
     NSApplication,
     NSApplicationActivationPolicyAccessory,
@@ -16,121 +15,216 @@ from PyObjCTools import AppHelper
 
 
 class CounterDB:
-    def __init__(self, db_path: str = "counter.db"):
+    def __init__(self):
         # Store database in user's home directory
-        self.db_path = os.path.expanduser(os.path.join("~", ".counter.db"))
+        self.db_path = os.path.expanduser(os.path.join("~", ".counter.duckdb"))
+        print(f"Opening database at {self.db_path}")
+        self._connect()
         self.init_db()
 
-    def _adapt_datetime(self, dt: datetime) -> str:
-        """Convert datetime to string format for SQLite"""
-        return dt.isoformat()
+    def _connect(self):
+        """Ensure we have a valid connection"""
+        try:
+            # Test if connection is still valid
+            if hasattr(self, "con"):
+                try:
+                    self.con.execute("SELECT 1").fetchone()
+                    return
+                except duckdb.Error:
+                    # Connection is dead, close it
+                    try:
+                        self.con.close()
+                    except duckdb.Error:
+                        pass
 
-    def _convert_datetime(self, value: str) -> datetime:
-        """Convert string from SQLite back to datetime"""
-        return datetime.fromisoformat(value)
+            # Create new connection
+            self.con = duckdb.connect(self.db_path, read_only=False)
+            print("Created new database connection")
+        except duckdb.Error as e:
+            print(f"Error connecting to database: {e}")
+            raise
+
+    def _ensure_connection(self):
+        """Decorator to ensure connection is valid before operations"""
+        self._connect()
 
     def init_db(self):
-        with sqlite3.connect(self.db_path) as conn:
-            # Register datetime adapter and converter
-            sqlite3.register_adapter(datetime, self._adapt_datetime)
-            sqlite3.register_converter("datetime", self._convert_datetime)
-            
-            cursor = conn.cursor()
+        try:
             # Counters table stores the current state of each counter
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS counters (
-                    id INTEGER PRIMARY KEY,
-                    name TEXT UNIQUE,
-                    current_value INTEGER,
-                    display_format TEXT
-                )
+            self.con.execute("""
+                CREATE SEQUENCE IF NOT EXISTS counter_id_seq;
             """)
+
+            self.con.execute("""
+                CREATE TABLE IF NOT EXISTS counters (
+                    id INTEGER PRIMARY KEY DEFAULT nextval('counter_id_seq'),
+                    name VARCHAR UNIQUE,
+                    current_value INTEGER DEFAULT 0,
+                    display_format VARCHAR
+                );
+            """)
+
             # History table stores all counter changes
-            cursor.execute("""
+            self.con.execute("""
+                CREATE SEQUENCE IF NOT EXISTS history_id_seq;
+            """)
+
+            self.con.execute("""
                 CREATE TABLE IF NOT EXISTS counter_history (
-                    id INTEGER PRIMARY KEY,
+                    id INTEGER PRIMARY KEY DEFAULT nextval('history_id_seq'),
                     counter_id INTEGER,
                     value INTEGER,
-                    timestamp datetime,  -- Note: lowercase datetime for type
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (counter_id) REFERENCES counters (id)
-                )
+                );
             """)
-            conn.commit()
+            print("Database initialized successfully")
+        except duckdb.Error as e:
+            print(f"Error initializing database: {e}")
+            raise
 
     def get_or_create_counter(self, name: str = "default") -> Tuple[int, int, str]:
         """Returns (counter_id, current_value, display_format)"""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT id, current_value, display_format FROM counters WHERE name = ?",
-                (name,),
-            )
-            result = cursor.fetchone()
+        try:
+            self._ensure_connection()
+            # Try to get existing counter
+            result = self.con.execute(
+                """
+                SELECT id, current_value, display_format 
+                FROM counters 
+                WHERE name = ?
+            """,
+                [name],
+            ).fetchone()
+
             if result:
+                print(f"Found existing counter: {result}")
                 return result
 
+            print("Creating new counter")
             # Create new counter if it doesn't exist
-            cursor.execute(
-                "INSERT INTO counters (name, current_value, display_format) VALUES (?, ?, ?)",
-                (name, 0, "long"),
+            self.con.execute(
+                """
+                INSERT INTO counters (name, current_value, display_format) 
+                VALUES (?, ?, ?)
+            """,
+                [name, 0, "long"],
             )
-            return (cursor.lastrowid, 0, "long")
+
+            result = self.con.execute(
+                """
+                SELECT id, current_value, display_format 
+                FROM counters 
+                WHERE name = ?
+            """,
+                [name],
+            ).fetchone()
+            print(f"Created new counter: {result}")
+            return result
+        except duckdb.Error as e:
+            print(f"Error in get_or_create_counter: {e}")
+            self._connect()  # Try to reconnect for next operation
+            raise
 
     def increment_counter(self, counter_id: int) -> int:
-        with sqlite3.connect(self.db_path, detect_types=sqlite3.PARSE_DECLTYPES) as conn:
-            cursor = conn.cursor()
+        try:
+            self._ensure_connection()
             # Update current value
-            cursor.execute(
-                "UPDATE counters SET current_value = current_value + 1 WHERE id = ?",
-                (counter_id,),
+            self.con.execute(
+                """
+                UPDATE counters 
+                SET current_value = current_value + 1 
+                WHERE id = ?
+            """,
+                [counter_id],
             )
+
             # Get new value
-            cursor.execute(
-                "SELECT current_value FROM counters WHERE id = ?", (counter_id,)
-            )
-            new_value = cursor.fetchone()[0]
+            new_value = self.con.execute(
+                """
+                SELECT current_value 
+                FROM counters 
+                WHERE id = ?
+            """,
+                [counter_id],
+            ).fetchone()[0]
+
             # Record in history
-            cursor.execute(
-                "INSERT INTO counter_history (counter_id, value, timestamp) VALUES (?, ?, ?)",
-                (counter_id, new_value, datetime.now()),
+            self.con.execute(
+                """
+                INSERT INTO counter_history (counter_id, value, timestamp) 
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+            """,
+                [counter_id, new_value],
             )
+
+            # print(f"Incremented counter {counter_id} to {new_value}")
             return new_value
+        except duckdb.Error as e:
+            print(f"Error incrementing counter: {e}")
+            self._connect()  # Try to reconnect for next operation
+            raise
 
     def reset_counter(self, counter_id: int):
-        with sqlite3.connect(self.db_path, detect_types=sqlite3.PARSE_DECLTYPES) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE counters SET current_value = 0 WHERE id = ?", (counter_id,)
-            )
-            cursor.execute(
-                "INSERT INTO counter_history (counter_id, value, timestamp) VALUES (?, ?, ?)",
-                (counter_id, 0, datetime.now()),
+        try:
+            self._ensure_connection()
+            self.con.execute(
+                """
+                UPDATE counters 
+                SET current_value = 0 
+                WHERE id = ?
+            """,
+                [counter_id],
             )
 
-    def update_display_format(self, counter_id: int, format: str):
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE counters SET display_format = ? WHERE id = ?",
-                (format, counter_id),
+            self.con.execute(
+                """
+                INSERT INTO counter_history (counter_id, value, timestamp) 
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+            """,
+                [counter_id, 0],
             )
+            # print(f"Reset counter {counter_id}")
+        except duckdb.Error as e:
+            print(f"Error resetting counter: {e}")
+            self._connect()  # Try to reconnect for next operation
+            raise
+
+    def update_display_format(self, counter_id: int, format: str):
+        try:
+            self._ensure_connection()
+            self.con.execute(
+                """
+                UPDATE counters 
+                SET display_format = ? 
+                WHERE id = ?
+            """,
+                [format, counter_id],
+            )
+            # print(f"Updated display format for counter {counter_id} to {format}")
+        except duckdb.Error as e:
+            print(f"Error updating display format: {e}")
+            self._connect()  # Try to reconnect for next operation
+            raise
 
     def get_daily_stats(self, counter_id: int) -> List[Tuple[str, int]]:
         """Returns list of (date, count) tuples for the past week"""
-        with sqlite3.connect(self.db_path, detect_types=sqlite3.PARSE_DECLTYPES) as conn:
-            cursor = conn.cursor()
-            cursor.execute(
+        try:
+            return self.con.execute(
                 """
-                SELECT date(timestamp), COUNT(*)
+                SELECT date_trunc('day', timestamp)::DATE as day, COUNT(*) as clicks
                 FROM counter_history
                 WHERE counter_id = ?
-                AND timestamp >= date('now', '-7 days')
-                GROUP BY date(timestamp)
-                ORDER BY date(timestamp)
+                AND timestamp >= CURRENT_DATE - INTERVAL '7 days'
+                GROUP BY day
+                ORDER BY day
             """,
-                (counter_id,),
-            )
-            return cursor.fetchall()
+                [counter_id],
+            ).fetchall()
+        except duckdb.Error as e:
+            print(f"Error getting daily stats: {e}")
+            self._connect()  # Try to reconnect for next operation
+            raise
 
 
 class CounterApp:
@@ -144,7 +238,9 @@ class CounterApp:
 
         # Create the status item in the menu bar with variable width
         self.statusbar = NSStatusBar.systemStatusBar()
-        self.statusitem = self.statusbar.statusItemWithLength_(-1 if self.text else 40)
+        self.statusitem = self.statusbar.statusItemWithLength_(
+            -1
+        )  # -1 means variable length
 
         # Create the menu
         self.menu = NSMenu.alloc().init()
@@ -189,6 +285,8 @@ class CounterApp:
         event_type = event.type()
         if event_type == NSEventTypeRightMouseDown:
             self.statusitem.popUpStatusItemMenu_(self.menu)
+            NSApplication.sharedApplication().runModalForWindow_(None)
+            NSApplication.sharedApplication().stopModal()
         elif event_type == NSEventTypeLeftMouseDown:
             self.increment_(sender)
 
@@ -226,7 +324,10 @@ class CounterApp:
         os.system(command)
 
     def update_title(self):
-        self.button.setTitle_(f"{self.text}{self.count}")
+        title = f"{self.text}{self.count}"
+        self.button.setTitle_(title)
+        # Force button to update its size
+        self.button.sizeToFit()
 
     def run(self):
         self.app.setActivationPolicy_(NSApplicationActivationPolicyAccessory)
