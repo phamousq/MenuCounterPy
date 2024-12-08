@@ -32,6 +32,31 @@ A simple yet powerful menu bar counter application for macOS.
 
 ## Building
 - Using PyInstaller:
-  - pyinstaller main.py --add-data=".counter.db:."  -n MenuBarCounter -F -w -y --clean   
+  - pyinstaller main.py -n MenuBarCounter -F -w -y --clean   
   - .counter.db file will be located in ~/
   - file will be in dist folder
+
+## Next Steps
+- error: 
+  - Traceback (most recent call last):
+  File "main.py", line 18, in <module>
+  File "google/oauth2/service_account.py", line 260, in from_service_account_file
+  File "google/auth/_service_account_info.py", line 78, in from_filename
+FileNotFoundError: [Errno 2] No such file or directory: 'Stoked Capsule JSON - Google Cloud Console.json'
+[PYI-30829:ERROR] Failed to execute script 'main' due to unhandled exception: [Errno 2] No such file or directory: 'Stoked Capsule JSON - Google Cloud Console.json'
+[PYI-30829:ERROR] Traceback:
+Traceback (most recent call last):
+  File "main.py", line 18, in <module>
+  File "google/oauth2/service_account.py", line 260, in from_service_account_file
+  File "google/auth/_service_account_info.py", line 78, in from_filename
+FileNotFoundError: [Errno 2] No such file or directory: 'Stoked Capsule JSON - Google Cloud Console.json'
+
+
+Saving session...
+...copying shared history...
+...saving history...truncating history files...
+...completed.
+
+[Process completed]
+- don't know how else auth would be done.
+- this should only work from the commandline...
