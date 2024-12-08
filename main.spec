@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='MenuBarCounter',
+    name='main',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -38,7 +38,7 @@ exe = EXE(
 )
 app = BUNDLE(
     exe,
-    name='MenuBarCounter.app',
+    name='main.app',
     icon=None,
     bundle_identifier=None,
 )

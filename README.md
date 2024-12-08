@@ -38,6 +38,6 @@ Required packages:
 
 ## Building
 - Using PyInstaller:
-  - pyinstaller main.py -n MenuBarCounter -F -w -y --clean   
+  - pyinstaller main.py --add-data ".counter.duckdb:." -n MenuBarCounter -F -w -y --clean   
   - .counter.duckdb file will be created in ~/ on first run
   - Executable will be in dist folder

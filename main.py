@@ -17,7 +17,7 @@ from PyObjCTools import AppHelper
 class CounterDB:
     def __init__(self):
         # Store database in user's home directory
-        self.db_path = os.path.expanduser(os.path.join("~", ".counter.duckdb"))
+        self.db_path = os.path.join(os.path.dirname(__file__), ".counter.duckdb")
         print(f"Opening database at {self.db_path}")
         self._connect()
         self.init_db()
