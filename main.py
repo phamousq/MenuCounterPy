@@ -34,7 +34,7 @@ class CounterDB:
             # Register datetime adapter and converter
             sqlite3.register_adapter(datetime, self._adapt_datetime)
             sqlite3.register_converter("datetime", self._convert_datetime)
-            
+
             cursor = conn.cursor()
             # Counters table stores the current state of each counter
             cursor.execute("""
@@ -77,7 +77,9 @@ class CounterDB:
             return (cursor.lastrowid, 0, "long")
 
     def increment_counter(self, counter_id: int) -> int:
-        with sqlite3.connect(self.db_path, detect_types=sqlite3.PARSE_DECLTYPES) as conn:
+        with sqlite3.connect(
+            self.db_path, detect_types=sqlite3.PARSE_DECLTYPES
+        ) as conn:
             cursor = conn.cursor()
             # Update current value
             cursor.execute(
@@ -97,7 +99,9 @@ class CounterDB:
             return new_value
 
     def reset_counter(self, counter_id: int):
-        with sqlite3.connect(self.db_path, detect_types=sqlite3.PARSE_DECLTYPES) as conn:
+        with sqlite3.connect(
+            self.db_path, detect_types=sqlite3.PARSE_DECLTYPES
+        ) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 "UPDATE counters SET current_value = 0 WHERE id = ?", (counter_id,)
@@ -117,7 +121,9 @@ class CounterDB:
 
     def get_daily_stats(self, counter_id: int) -> List[Tuple[str, int]]:
         """Returns list of (date, count) tuples for the past week"""
-        with sqlite3.connect(self.db_path, detect_types=sqlite3.PARSE_DECLTYPES) as conn:
+        with sqlite3.connect(
+            self.db_path, detect_types=sqlite3.PARSE_DECLTYPES
+        ) as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
@@ -189,6 +195,8 @@ class CounterApp:
         event_type = event.type()
         if event_type == NSEventTypeRightMouseDown:
             self.statusitem.popUpStatusItemMenu_(self.menu)
+            NSApplication.sharedApplication().runModalForWindow_(None)
+            NSApplication.sharedApplication().stopModal()
         elif event_type == NSEventTypeLeftMouseDown:
             self.increment_(sender)
 

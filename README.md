@@ -32,6 +32,6 @@ A simple yet powerful menu bar counter application for macOS.
 
 ## Building
 - Using PyInstaller:
-  - pyinstaller main.py --add-data="counter.db:."  -n MenuBarCounter -F -w -y --clean   
+  - pyinstaller main.py --add-data=".counter.db:."  -n MenuBarCounter -F -w -y --clean   
   - .counter.db file will be located in ~/
   - file will be in dist folder
