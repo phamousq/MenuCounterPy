@@ -32,13 +32,14 @@ A simple yet powerful menu bar counter application for macOS.
 
 ## Building
 - Using PyInstaller:
-  - pyinstaller main.py -n MenuBarCounter -F -w -y --clean   
+  - `pyinstaller main.py -n MenuBarCounterAPI -F -w -y --clean`   
+  - google sheets file: 
   - .counter.db file will be located in ~/
   - file will be in dist folder
 
 ## Next Steps
-- error: 
-  - Traceback (most recent call last):
+```Error
+Traceback (most recent call last):
   File "main.py", line 18, in <module>
   File "google/oauth2/service_account.py", line 260, in from_service_account_file
   File "google/auth/_service_account_info.py", line 78, in from_filename
@@ -58,5 +59,8 @@ Saving session...
 ...completed.
 
 [Process completed]
-- don't know how else auth would be done.
-- this should only work from the commandline...
+```
+  - error: 
+  - don't know how else auth would be done.
+  - this should only work from the commandline...
+- Auth files are not shared betwee computers and state
